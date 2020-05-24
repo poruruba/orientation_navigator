@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'; style-src * 'unsafe-inline'; media-src *; img-src * data: content: blob:;">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="msapplication-tap-highlight" content="no">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+
+  <title>オリエンテーション ナビゲータ</title>
+
+  <link rel="stylesheet" href="css/start.css">
+  <script src="js/methods_bootstrap.js"></script>
+  <script src="js/components_bootstrap.js"></script>
+  <script src="js/vue_utils.js"></script>
+
+  <script src="dist/js/vconsole.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <script type="text/javascript" src="//maps.google.com/maps/api/js?key=AIzaSyBUUDat7Ze61D574ywyThrlEMvryEOq6Eg"></script> 
+</head>
+<body>
+    <div id="top" class="container">
+        <h1>オリエンテーション ナビゲータ</h1>
+
+        <ul class="nav nav-tabs">
+          <li role="presentation" class="active"><a href="#oriatation" v-on:click="orientation_update_view" data-toggle="tab">オリエンテーション</a></li>
+          <li role="presentation"><a href="#checkpoint" data-toggle="tab">チェックポイント</a></li>
+          <li role="presentation"><a href="#myspot" data-toggle="tab">マイスポット</a></li>
+        </ul>
+
+        <div class="tab-content">
+          <div id="oriatation" class="tab-pane fade in active">
+            <br>
+            <span class="form-inline">
+              <select class="form-control" v-model="travelmode">
+                <option value="walking">walking</option>
+                <option value="bicycling">bicycling</option>
+                <option value="driving">driving</option>
+                <option value="transit">transit</option>
+              </select>
+            </span>
+            <div class="btn-group">
+              <button class="btn btn-primary" v-on:click="orientation_next">{{orientation_text}}</button>
+              <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>              
+              <ul class="dropdown-menu">
+                <li><a v-on:click="orientation_restart(-1)">最初から再開</a></li>
+                <li><a v-on:click="orientation_restart(origin_index)">今のチェックポイントを再開</a></li>
+              </ul>
+            </div>
+            <span v-if="checkpoints.length >= 2">
+              <br><br>
+              <label>現在地：</label>{{origin_index + 1}} {{checkpoints[origin_index].name}},
+              <label>目的地：</label>{{get_next_destination() + 1}} {{checkpoints[get_next_destination()].name}}
+            </span>
+            <button class="btn btn-default btn-xs pull-right" v-on:click="map_goto_current_location">現在地へ</button>
+            <br>
+            <div class="row" id="map_canvas" style="margin: 15px; height:600px"></div>
+          </div>
+
+          <div id="checkpoint" class="tab-pane fade in">
+            <br>
+            <button class="btn btn-primary" v-on:click="do_checkpoints_reset">チェックポイントのリセット</button>
+            <table class="table table-striped">
+              <thead>
+                <tr><th>#</th><th>名前</th><th>経由地</th><th>編集</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="(point, index) in checkpoints">
+                  <td width="1px">
+                    <div class="form-inline">
+                      <select v-bind:value="index" v-on:change="do_checkpoint_change_index(index, $event)">
+                        <option v-for="(point2, index2) in checkpoints" v-bind:value="index2" v-bind:selected="index==index2">{{index2 + 1}}</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td>
+                    <button class="btn btn-default btn-xs" v-on:click="do_checkpoint_delete(index)">削除</button> {{point.name}}
+                  </td>
+                  <td>
+                    <input v-if="index!=0 && index!=(checkpoints.length-1)" type="checkbox" v-model="point.waypoint">
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <button class="btn btn-default btn-sm" v-on:click="do_checkpoint_change_name(index)">名前</button>
+                      <button class="btn btn-default btn-sm" v-on:click="do_checkpoint_change_location(index)">場所</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td>
+                    <div class="btn-group">
+                      <button class="btn btn-default btn-sm" v-on:click="do_checkpoint_append">チェックポイント追加</button>
+                      <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>              
+                      <ul class="dropdown-menu">
+                        <li><a v-on:click="do_checkpoint_append_myspot">マイスポットから追加</a></li>
+                      </ul>
+                    </div>
+                  </td><td></td><td></td>
+                </tr>
+              </tbody>
+            </table>            
+          </div>
+
+          <div id="myspot" class="tab-pane fade in">
+            <br>
+            <table class="table table-striped">
+              <thead>
+                <tr><th>#</th><th>名前</th><th>緯度</th><th>経度</th><th>編集</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="(spot, index) in myspots">
+                  <td width="1px">{{index + 1}}</td>
+                  <td><button class="btn btn-default btn-xs" v-on:click="do_myspot_delete(index)">削除</button> {{spot.name}}</td>
+                  <td>{{spot.lat.toFixed(7)}}</td><td>{{spot.lng.toFixed(7)}}</td>
+                  <td>
+                    <div class="btn-group">
+                      <button class="btn btn-default btn-sm" v-on:click="do_myspot_change_name(index)">名前</button>
+                      <button class="btn btn-default btn-sm" v-on:click="do_myspot_change_location(index)">場所</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td>
+                    <button class="btn btn-default btn-sm" v-on:click="do_myspot_append">地図から追加</button>
+                  </td>
+                  <td></td><td></td><td></td>
+                </tr>
+              </tbody>
+            </table>            
+          </div>
+          <br>
+          <br>
+        </div>
+
+        <modal-dialog size="lg" id="orientation_complete_dialog">
+          <div slot="content">
+            <div class="modal-header">
+              <h4 class="modal-title">オリエンテーション達成</h4>
+            </div>
+            <div class="modal-body">
+              <center>
+                オリエンテーション達成です。おめでとうございます。<br>
+                <img src="img/goal_figure.png">
+              </center>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-default" v-on:click="dialog_close('#orientation_complete_dialog')">閉じる</button>
+            </div>
+          </div>
+        </modal-dialog>
+
+        <modal-dialog size="lg" id="select_location_dialog">
+          <div slot="content">
+            <div class="modal-header">
+              <h4 class="modal-title">{{dialog_params.title}}</h4>
+            </div>
+            <div class="modal-body">
+              <div class="form-inline">
+                <button class="btn btn-default" v-on:click="dialog_submit" v-if="dialog_params.is_input_submit">この場所にする</button>
+                <span v-if="dialog_params.is_input_name">
+                  <label>名前</label> <input type="text" class="form-control" v-model="dialog_params.name">
+                </span>
+              </div>
+              <div class="row" id="map_canvas2" style="margin: 20px; height:300px"></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-default" v-on:click="dialog_close('#select_location_dialog')">キャンセル</button>
+            </div>
+          </div>
+        </modal-dialog>
+
+
+        <!-- for progress-dialog -->
+        <progress-dialog v-bind:title="progress_title"></progress-dialog>
+    </div>
+
+    <script src="js/start.js"></script>
+</body>
