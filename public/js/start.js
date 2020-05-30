@@ -201,8 +201,10 @@ var vue_options = {
                 });
             }else if( this.dialog_params.title == 'マイスポットの変更'){
                 var location = this.map2.getCenter();
-                this.myspots[this.dialog_params.index].lat = location.lat();
-                this.myspots[this.dialog_params.index].lng = location.lng();
+                var point = this.myspots[this.dialog_params.index];
+                point.lat = location.lat();
+                point.lng = location.lng();
+                Vue.set(this.myspots, this.dialog_params.index, point);
             }else if( this.dialog_params.title == 'チェックポイントの変更' ){
                 var location = this.map2.getCenter();
                 var point = this.checkpoints[this.dialog_params.index];
