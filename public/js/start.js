@@ -205,8 +205,10 @@ var vue_options = {
                 this.myspots[this.dialog_params.index].lng = location.lng();
             }else if( this.dialog_params.title == 'チェックポイントの変更' ){
                 var location = this.map2.getCenter();
-                this.checkpoints[this.dialog_params.index].lat = location.lat();
-                this.checkpoints[this.dialog_params.index].lng = location.lng();
+                var point = this.checkpoints[this.dialog_params.index];
+                point.lat = location.lat();
+                point.lng = location.lng();
+                Vue.set(this.checkpoints, this.dialog_params.index, point);
             }
             this.dialog_close('#select_location_dialog');
         },
