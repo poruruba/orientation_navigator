@@ -242,7 +242,9 @@ var vue_options = {
             var name = window.prompt('新しい名前', this.myspots[index].name);
             if( !name )
                 return;
-            this.myspots[index].name = name;
+            var spot = this.myspots[index];
+            spot.name = name;
+            Vue.set(this.myspots, index, spot);            
         },
         // マイスポットのロケーション変更
         do_myspot_change_location: function(index){
@@ -329,7 +331,9 @@ var vue_options = {
             var name = window.prompt('新しい名前', this.checkpoints[index].name);
             if( !name )
                 return;
-            this.checkpoints[index].name = name;
+            var point = this.checkpoints[index];
+            point.name = name;
+            Vue.set(this.checkpoints, index, point);            
         },
         // チェックポイントのロケーション変更
         do_checkpoint_change_location: function(index){
